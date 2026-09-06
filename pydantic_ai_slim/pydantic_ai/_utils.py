@@ -1067,11 +1067,19 @@ def get_union_args(tp: Any) -> tuple[Any, ...]:
         return ()
 
 
+def _implements_run_until_complete(loop: asyncio.AbstractEventLoop) -> bool:
+    """Whether `loop` actually implements `run_until_complete()`."""
+    return getattr(loop.run_until_complete, '__func__', None) is not asyncio.AbstractEventLoop.run_until_complete
+
+
 def get_event_loop() -> asyncio.AbstractEventLoop:
     try:
         event_loop = asyncio.get_event_loop()
     except RuntimeError:
         event_loop = None
+
+    if event_loop is not None and not _implements_run_until_complete(event_loop):
+        return event_loop
 
     if event_loop is None or event_loop.is_closed():
         event_loop = asyncio.new_event_loop()

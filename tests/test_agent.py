@@ -99,6 +99,8 @@ from pydantic_ai.settings import ModelSettings
 from pydantic_ai.tools import DeferredToolRequests, DeferredToolResults, ToolDefinition, ToolDenied
 from pydantic_graph import End
 
+from .conftest import undrivable_event_loop
+
 if TYPE_CHECKING:
     from pydantic_ai.providers.alibaba import AlibabaProvider
     from pydantic_ai.providers.anthropic import AnthropicProvider
@@ -236,6 +238,14 @@ def test_run_sync_creates_missing_event_loop(missing_event_loop: asyncio.Abstrac
     assert replacement_loop is not missing_event_loop
     assert not replacement_loop.is_closed()
     assert not asyncio.all_tasks(replacement_loop)
+
+
+def test_run_sync_keeps_undrivable_event_loop():
+    """`run_sync` should preserve runtime-owned loops that it cannot drive itself."""
+    agent = Agent(TestModel(custom_output_text='success'))
+
+    with undrivable_event_loop(), pytest.raises(UserError, match='does not implement `run_until_complete\\(\\)`'):
+        agent.run_sync('Hello')
 
 
 def test_result_tuple():

@@ -17,7 +17,7 @@ from dirty_equals import HasRepr, IsNumber, IsOneOf
 from pydantic import BaseModel, TypeAdapter
 
 from .._inline_snapshot import snapshot
-from ..conftest import IsStr, try_import
+from ..conftest import IsStr, try_import, undrivable_event_loop
 from .utils import render_table
 
 with try_import() as imports_successful:
@@ -128,6 +128,14 @@ def test_evaluate_sync_creates_missing_event_loop(missing_event_loop: asyncio.Ab
     assert replacement_loop is not missing_event_loop
     assert not replacement_loop.is_closed()
     assert not asyncio.all_tasks(replacement_loop)
+
+
+def test_evaluate_sync_keeps_undrivable_event_loop():
+    """`evaluate_sync` should preserve runtime-owned loops that it cannot drive itself."""
+    dataset = Dataset(name='test', cases=[Case(name='case', inputs='input')])
+
+    with undrivable_event_loop(), pytest.raises(NotImplementedError):
+        dataset.evaluate_sync(lambda value: value, progress=False)
 
 
 class TaskMetadata(BaseModel):
